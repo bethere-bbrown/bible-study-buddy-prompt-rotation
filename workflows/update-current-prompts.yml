@@ -1,7 +1,7 @@
 name: Update current prompts weekly
 
 on:
-  schedule:
+  schedule: 2025-09-29
     # Every Monday at 00:05 UTC (adjust as needed)
     - cron: "5 0 * * 1"
   workflow_dispatch:
