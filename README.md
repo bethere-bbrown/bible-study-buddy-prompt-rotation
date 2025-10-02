@@ -9,4 +9,4 @@ Includes:
 - JSON for dynamic loading
 - Markdown usage reference
 
-Created for [Bible Study GPT](https://chat.openai.com/g/g-bfY3bXl3o-bible-study-gpt) by bethere-bbrown.
+Created for [Bible Study Buddy GPT](https://chatgpt.com/g/g-68db0c1c109c81919e508e6a84757780-bible-study-buddy) by bethere-bbrown.
