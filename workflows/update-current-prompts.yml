@@ -1,0 +1,178 @@
+name: Update current prompts weekly
+
+on:
+  schedule:
+    # Every Monday at 00:05 UTC (adjust as needed)
+    - cron: "5 0 * * 1"
+  workflow_dispatch:
+    inputs:
+      overrideDate:
+        description: "Override date in YYYY-MM-DD to compute week"
+        required: false
+      dryRun:
+        description: "Set 'true' to see which week would be selected without committing"
+        required: false
+        default: "false"
+  push:
+    paths:
+      # If you edit a week's file, you can optionally re-run the workflow
+      - "weekly-prompts/**"
+
+permissions:
+  contents: write
+
+jobs:
+  rotate-prompts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute target week and update current-prompts
+        env:
+          # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+          # REQUIRED: Set the start date of WEEK 1 (ISO format, UTC assumed)
+          # Example: first Monday of a cycle.
+          START_DATE: "2025-10-06"
+          # Number of weeks in your rotation (you have 12)
+          TOTAL_WEEKS: "12"
+          # Folder where your weekly files live
+          WEEKLY_DIR: "weekly-prompts"
+          # Output file(s) to write
+          OUTPUT_TXT: "current-prompts.txt"
+          # OPTIONAL: Also publish JSON alongside TXT (true/false)
+          PUBLISH_JSON: "true"
+          OUTPUT_JSON: "current-prompts.json"
+          # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          OVERRIDE_DATE: "${{ github.event.inputs.overrideDate }}"
+          DRY_RUN: "${{ github.event.inputs.dryRun }}"
+        run: |
+          set -euo pipefail
+
+          # Pick the reference date (override if provided)
+          REF_DATE="${OVERRIDE_DATE:-}"
+          if [ -z "$REF_DATE" ]; then
+            REF_DATE="$(date -u +%F)"
+          fi
+
+          echo "Reference date: $REF_DATE (UTC)"
+          echo "Start date    : $START_DATE (UTC)"
+          echo "Total weeks   : $TOTAL_WEEKS"
+
+          # Compute difference in days and convert to week index
+          start_secs="$(date -u -d "$START_DATE" +%s)"
+          ref_secs="$(date -u -d "$REF_DATE" +%s)"
+
+          if [ "$ref_secs" -lt "$start_secs" ]; then
+            echo "Reference date is before START_DATE. Using week 1."
+            week_idx=0
+          else
+            diff_days=$(( (ref_secs - start_secs) / 86400 ))
+            week_idx=$(( diff_days / 7 ))
+          fi
+
+          # Compute 1-based week number with wrap-around (1..TOTAL_WEEKS)
+          total=$(( TOTAL_WEEKS ))
+          week_num=$(( (week_idx % total) + 1 ))
+
+          echo "Computed week index (0-based): $week_idx"
+          echo "Selected WEEK NUMBER        : $week_num"
+
+          WEEK_FILE="$WEEKLY_DIR/week${week_num}.txt"
+          if [ ! -f "$WEEK_FILE" ]; then
+            echo "ERROR: Expected file not found: $WEEK_FILE"
+            echo "Make sure weekly-prompts/week${week_num}.txt exists."
+            exit 1
+          fi
+
+          echo ""
+          echo "===== Preview of $WEEK_FILE ====="
+          head -n 100 "$WEEK_FILE" || true
+          echo "================================="
+
+          # If DRY_RUN, stop here
+          if [ "${DRY_RUN,,}" = "true" ]; then
+            echo "Dry run enabled. Not writing or committing."
+            exit 0
+          fi
+
+          # Update TXT
+          cp "$WEEK_FILE" "$OUTPUT_TXT"
+
+          # Optionally publish JSON variant
+          if [ "${PUBLISH_JSON,,}" = "true" ]; then
+            # Convert simple line list into JSON array
+            echo "Creating $OUTPUT_JSON from $WEEK_FILE"
+            printf '{\n  "week": %d,\n  "prompts": [\n' "$week_num" > "$OUTPUT_JSON"
+            # Escape quotes and backslashes; output as JSON strings
+            awk '{
+              gsub(/\\/,"\\\\");
+              gsub(/"/,"\\\"");
+              printf "    \"%s\"", $0;
+              if (!/^[[:space:]]*$/) {
+                # Non-empty; add comma if not last line; we don’t know last line easily
+                # We’ll clean trailing comma below if needed
+                printf ","
+              }
+              printf "\n"
+            }' "$WEEK_FILE" >> "$OUTPUT_JSON"
+            # Remove trailing comma from last non-empty line
+            # A safer approach is to rebuild properly; here we trim the last comma before ]
+            # Use Python if available; otherwise sed trick:
+            # Remove comma that is followed only by optional spaces/newlines and the closing ]
+            # We'll reconstruct safely with a small Python fallback if available
+            python3 - << 'PYCODE' 2>/dev/null || true
+import json, sys
+try:
+    with open("current-prompts.txt", "r", encoding="utf-8") as f:
+        lines = [ln.rstrip("\n") for ln in f if ln.strip() != ""]
+    data = {"week": 0, "prompts": lines}
+    # week will be overwritten below; this is just to ensure valid JSON structure
+except Exception:
+    pass
+PYCODE
+            # Simpler: rebuild JSON cleanly with jq if present; otherwise do a clean build in bash
+            if command -v jq >/dev/null 2>&1; then
+              jq -Rn --argjson w "$week_num" '
+                [inputs] |
+                map(select(length>0)) |
+                {week: $w, prompts: .}
+              ' < "$WEEK_FILE" > "$OUTPUT_JSON"
+            else
+              # Pure bash JSON rebuild (basic escaping)
+              echo "Rebuilding JSON without jq..."
+              printf '{\n  "week": %d,\n  "prompts": [\n' "$week_num" > "$OUTPUT_JSON"
+              first=1
+              while IFS= read -r line || [ -n "$line" ]; do
+                trimmed="${line#"${line%%[![:space:]]*}"}"
+                if [ -n "$trimmed" ]; then
+                  esc="${line//\\/\\\\}"
+                  esc="${esc//\"/\\\"}"
+                  if [ $first -eq 1 ]; then
+                    printf '    "%s"' "$esc" >> "$OUTPUT_JSON"
+                    first=0
+                  else
+                    printf ',\n    "%s"' "$esc" >> "$OUTPUT_JSON"
+                  fi
+                fi
+              done < "$WEEK_FILE"
+              printf '\n  ]\n}\n' >> "$OUTPUT_JSON"
+            fi
+          fi
+
+          # Configure git user
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Commit only if there are changes
+          if ! git diff --quiet; then
+            git add "$OUTPUT_TXT"
+            if [ "${PUBLISH_JSON,,}" = "true" ]; then
+              git add "$OUTPUT_JSON"
+            fi
+            git commit -m "chore: rotate prompts to week ${week_num} (ref: $REF_DATE)"
+            git push
+            echo "Changes committed and pushed."
+          else
+            echo "No changes to commit."
+          fi
