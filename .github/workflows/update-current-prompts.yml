@@ -32,25 +32,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install jq (for JSON build)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
-
       - name: Compute target week and update current-prompts
         env:
           # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
           # REQUIRED: Set the start date for WEEK 1 (ISO format, UTC)
           # Example below is a Monday. Change to your own Week 1 start.
           START_DATE: "2025-10-06"
-          # Total weeks in rotation
-          TOTAL_WEEKS: "12"
+          # Total weeks in your rotation (you have 4)
+          TOTAL_WEEKS: "4"
           # Folder with weekly files
           WEEKLY_DIR: "weekly-prompts"
-          # Output files
+          # Output file
           OUTPUT_TXT: "current-prompts.txt"
-          PUBLISH_JSON: "true"
-          OUTPUT_JSON: "current-prompts.json"
           # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           OVERRIDE_DATE: "${{ github.event.inputs.overrideDate }}"
           DRY_RUN: "${{ github.event.inputs.dryRun }}"
@@ -100,28 +93,13 @@ jobs:
           # Update TXT
           cp "$WEEK_FILE" "$OUTPUT_TXT"
 
-          # Optional JSON
-          if [ "${PUBLISH_JSON,,}" = "true" ]; then
-            jq -Rn --argjson w "$week_num" '
-              [inputs]                                         # read entire file as a single string
-              | join("")                                       # join (inputs) to one raw string
-              | split("\n")                                    # split by lines
-              | map(. | gsub("\\r$"; "") )                     # strip Windows CR if any
-              | map(select(. != ""))                           # drop empty lines
-              | {week: $w, prompts: .}
-            ' < "$WEEK_FILE" > "$OUTPUT_JSON"
-          fi
-
-          # Git config
+          # Configure git
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Only commit if changes exist
+          # Commit only if changes exist
           if ! git diff --quiet; then
             git add "$OUTPUT_TXT"
-            if [ "${PUBLISH_JSON,,}" = "true" ]; then
-              git add "$OUTPUT_JSON"
-            fi
             git commit -m "chore: rotate prompts to week ${week_num} (ref: $REF_DATE)"
             git push
             echo "Changes committed and pushed."
