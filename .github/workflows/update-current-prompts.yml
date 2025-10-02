@@ -1,0 +1,94 @@
+name: Update current prompts weekly
+
+on:
+  schedule:
+    # Every Monday at 00:05 UTC (adjust as needed)
+    - cron: "5 0 * * 1"
+  workflow_dispatch:
+    inputs:
+      overrideDate:
+        description: "Override date in YYYY-MM-DD to compute week (UTC)"
+        required: false
+      dryRun:
+        description: "Set 'true' to preview without committing"
+        required: false
+        default: "false"
+  push:
+    paths:
+      - "weekly-prompts/**"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rotate-prompts
+  cancel-in-progress: false
+
+jobs:
+  rotate-prompts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute target week and update current-prompts
+        env:
+          # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+          # REQUIRED: Set the start date for WEEK 1 (ISO format, UTC)
+          # Example below is a Monday. Change to your own Week 1 start.
+          START_DATE: "2025-10-06"
+          # Total weeks in your rotation (you have 4)
+          TOTAL_WEEKS: "4"
+          # Folder with weekly files
+          WEEKLY_DIR: "weekly-prompts"
+          # Output file
+          OUTPUT_TXT: "current-prompts.txt"
+          # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          OVERRIDE_DATE: "${{ github.event.inputs.overrideDate }}"
+          DRY_RUN: "${{ github.event.inputs.dryRun }}"
+        run: |
+          set -euo pipefail
+
+          REF_DATE="${OVERRIDE_DATE:-$(date -u +%F)}"
+          echo "Reference date (UTC): $REF_DATE"
+          echo "Start date     (UTC): $START_DATE"
+          echo "Total weeks          : $TOTAL_WEEKS"
+
+          start_secs="$(date -u -d "$START_DATE" +%s)"
+          ref_secs="$(date -u -d "$REF_DATE" +%s)"
+
+          if [ "$ref_secs" -lt "$start_secs" ]; then
+            week_idx=0
+          else
+            diff_days=$(( (ref_secs - start_secs) / 86400 ))
+            week_idx=$(( diff_days / 7 ))
+          fi
+
+          total=$(( TOTAL_WEEKS ))
+          week_num=$(( (week_idx % total) + 1 ))
+
+          echo "Computed week index (0-based): $week_idx"
+          echo "Selected WEEK NUMBER         : $week_num"
+
+          WEEK_FILE="$WEEKLY_DIR/week${week_num}.txt"
+          if [ ! -f "$WEEK_FILE" ]; then
+            echo "ERROR: Expected file not found: $WEEK_FILE"
+            exit 1
+          fi
+
+          echo "Using $WEEK_FILE"
+          [ "${DRY_RUN,,}" = "true" ] && { echo "Dry run — not committing."; exit 0; }
+
+          cp "$WEEK_FILE" "$OUTPUT_TXT"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if ! git diff --quiet; then
+            git add "$OUTPUT_TXT"
+            git commit -m "chore: rotate prompts to week ${week_num} (ref: $REF_DATE)"
+            git push
+            echo "Changes committed and pushed."
+          else
+            echo "No changes to commit."
+          fi
