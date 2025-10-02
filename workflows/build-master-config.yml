@@ -1,0 +1,94 @@
+name: Build master-config.json
+
+on:
+  push:
+    paths:
+      - "versions.txt"
+      - "intro-verses.txt"
+      - "categorized/fallbacks.json"
+      - "current-prompts.txt"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Build versions JSON
+        run: |
+          # Parse "Name (ABBR) — ID" lines into JSON
+          jq -Rn '
+            [ inputs
+              | split("\n") | .[]
+              | select(length>0)
+              | gsub("\\r$"; "")
+              | capture("^(?<name>.+?)\\s*\\((?<abbr>[^)]+)\\)\\s*—\\s*(?<id>[^\\s]+)\\s*$")
+              | {name: .name, abbr: .abbr, bibleId: .id}
+            ]
+          ' < versions.txt > .versions.json
+
+      - name: Build introVerses JSON
+        run: |
+          # Parse "Reference | Text | Reflection: ..."
+          jq -Rn '
+            [ inputs
+              | split("\n") | .[]
+              | select(length>0)
+              | gsub("\\r$"; "")
+              | (split(" | ") | {reference: .[0], text: .[1], reflection: ( (.[2] // "") | sub("^Reflection:\\s*"; "") )})
+            ]
+          ' < intro-verses.txt > .intro.json
+
+      - name: Load fallbacks JSON
+        run: |
+          test -f categorized/fallbacks.json || echo '{ "general": [], "newBelievers": [], "deepStudy": [], "application": [] }' > categorized/fallbacks.json
+          jq '.' categorized/fallbacks.json > .fallbacks.json
+
+      - name: Build current prompts array
+        run: |
+          if [ -f current-prompts.txt ]; then
+            jq -Rs '
+              split("\n")
+              | map(gsub("\\r$"; ""))
+              | map(select(length>0))
+            ' < current-prompts.txt > .prompts.json
+          else
+            echo '[]' > .prompts.json
+          fi
+
+      - name: Assemble master-config.json
+        run: |
+          jq -n \
+            --slurpfile versions .versions.json \
+            --slurpfile intro .intro.json \
+            --slurpfile prompts .prompts.json \
+            --slurpfile fallbacks .fallbacks.json \
+            '{
+              versions: $versions[0],
+              introVerses: $intro[0],
+              currentPrompts: $prompts[0],
+              fallbacks: $fallbacks[0]
+            }' > master-config.json
+          cat master-config.json
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            git add master-config.json
+            git commit -m "build: update master-config.json"
+            git push
+            echo "Updated master-config.json"
+          else
+            echo "No changes"
+          fi
