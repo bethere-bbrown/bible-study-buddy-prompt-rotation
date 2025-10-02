@@ -36,7 +36,7 @@ jobs:
           # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
           # REQUIRED: Set the start date for WEEK 1 (ISO format, UTC)
           # Example below is a Monday. Change to your own Week 1 start.
-          START_DATE: "2025-10-06"
+          START_DATE: "2025-09-28"
           # Total weeks in your rotation (you have 4)
           TOTAL_WEEKS: "4"
           # Folder with weekly files
