@@ -18,42 +18,82 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Show branch and files
+        run: |
+          echo "GITHUB_REF: $GITHUB_REF"
+          echo "On branch:"
+          git branch --show-current
+          echo "Repo files:"
+          ls -la
+          echo "categorized/:"
+          ls -la categorized || true
+
       - name: Install jq
         run: |
           sudo apt-get update
           sudo apt-get install -y jq
 
-      - name: Build versions JSON
+      - name: Build versions JSON (accept em dash or hyphen)
         run: |
-          # Parse "Name (ABBR) — ID" lines into JSON
-          jq -Rn '
-            [ inputs
-              | split("\n") | .[]
-              | select(length>0)
-              | gsub("\\r$"; "")
-              | capture("^(?<name>.+?)\\s*\\((?<abbr>[^)]+)\\)\\s*—\\s*(?<id>[^\\s]+)\\s*$")
-              | {name: .name, abbr: .abbr, bibleId: .id}
-            ]
-          ' < versions.txt > .versions.json
+          if [ ! -f versions.txt ]; then
+            echo "versions.txt missing, creating empty list"
+            echo "[]" > .versions.json
+          else
+            # Normalize dash to em-dash to simplify parsing, then capture
+            sed 's/ - / — /g' versions.txt | \
+            jq -Rn '
+              [ inputs
+                | split("\n") | .[]
+                | select(length>0)
+                | gsub("\\r$"; "")
+                | capture("^(?<name>.+?)\\s*\\((?<abbr>[^)]+)\\)\\s*—\\s*(?<id>[^\\s]+)\\s*$")?
+                | if . == null
+                  then empty
+                  else {name: .name, abbr: .abbr, bibleId: .id}
+                  end
+              ]
+            ' > .versions.json
+          fi
+          echo "versions parsed:"
+          cat .versions.json
 
-      - name: Build introVerses JSON
+      - name: Build introVerses JSON (split by ' | ')
         run: |
-          # Parse "Reference | Text | Reflection: ..."
-          jq -Rn '
-            [ inputs
-              | split("\n") | .[]
-              | select(length>0)
-              | gsub("\\r$"; "")
-              | (split(" | ") | {reference: .[0], text: .[1], reflection: ( (.[2] // "") | sub("^Reflection:\\s*"; "") )})
-            ]
-          ' < intro-verses.txt > .intro.json
+          if [ ! -f intro-verses.txt ]; then
+            echo "intro-verses.txt missing, creating empty list"
+            echo "[]" > .intro.json
+          else
+            jq -Rn '
+              [ inputs
+                | split("\n") | .[]
+                | select(length>0)
+                | gsub("\\r$"; "")
+                | (split(" | ") | {reference: .[0], text: .[1], reflection: ( (.[2] // "") | sub("^Reflection:\\s*"; "") )})
+              ]
+            ' < intro-verses.txt > .intro.json
+          fi
+          echo "introVerses parsed:"
+          cat .intro.json
 
-      - name: Load fallbacks JSON
+      - name: Load fallbacks JSON (ensure present)
         run: |
-          test -f categorized/fallbacks.json || echo '{ "general": [], "newBelievers": [], "deepStudy": [], "application": [] }' > categorized/fallbacks.json
+          if [ ! -f categorized/fallbacks.json ]; then
+            echo "categorized/fallbacks.json missing, creating defaults"
+            mkdir -p categorized
+            cat > categorized/fallbacks.json <<'JSON'
+            {
+              "general": [],
+              "newBelievers": [],
+              "deepStudy": [],
+              "application": []
+            }
+            JSON
+          fi
           jq '.' categorized/fallbacks.json > .fallbacks.json
+          echo "fallbacks parsed:"
+          cat .fallbacks.json
 
-      - name: Build current prompts array
+      - name: Build current prompts array (if present)
         run: |
           if [ -f current-prompts.txt ]; then
             jq -Rs '
@@ -62,8 +102,10 @@ jobs:
               | map(select(length>0))
             ' < current-prompts.txt > .prompts.json
           else
-            echo '[]' > .prompts.json
+            echo "[] " > .prompts.json
           fi
+          echo "currentPrompts parsed:"
+          cat .prompts.json
 
       - name: Assemble master-config.json
         run: |
@@ -78,6 +120,7 @@ jobs:
               currentPrompts: $prompts[0],
               fallbacks: $fallbacks[0]
             }' > master-config.json
+          echo "master-config.json:"
           cat master-config.json
 
       - name: Commit if changed
