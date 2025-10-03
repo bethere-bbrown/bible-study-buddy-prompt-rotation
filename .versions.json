@@ -1,0 +1,47 @@
+[
+  {
+    "name": "American Standard Version",
+    "abbr": "ASV",
+    "bibleId": "06125adad2d5898a-01"
+  },
+  {
+    "name": "Berean Standard Bible",
+    "abbr": "BSB",
+    "bibleId": "bba9f40183526463-01"
+  },
+  {
+    "name": "Douay-Rheims American 1899",
+    "abbr": "DRA",
+    "bibleId": "179568874c45066f-01"
+  },
+  {
+    "name": "Free Bible Version",
+    "abbr": "FBV",
+    "bibleId": "65eec8e0b60e656b-01"
+  },
+  {
+    "name": "King James Version",
+    "abbr": "KJV",
+    "bibleId": "de4e12af7f28f599-01"
+  },
+  {
+    "name": "Literal Standard Version",
+    "abbr": "LSV",
+    "bibleId": "01b29f4b342acc35-01"
+  },
+  {
+    "name": "World English Bible",
+    "abbr": "WEB",
+    "bibleId": "9879dbb7cfe39e4d-01"
+  },
+  {
+    "name": "World English Bible Updated",
+    "abbr": "WEBU",
+    "bibleId": "72f4e6dc683324df-01"
+  },
+  {
+    "name": "The Orthodox Jewish Bible",
+    "abbr": "TOJB2011",
+    "bibleId": "c89622d31b60c444-02"
+  }
+]

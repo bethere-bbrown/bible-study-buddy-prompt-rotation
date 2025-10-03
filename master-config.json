@@ -1,0 +1,122 @@
+{
+  "versions": [
+    {
+      "name": "American Standard Version",
+      "abbr": "ASV",
+      "bibleId": "06125adad2d5898a-01"
+    },
+    {
+      "name": "Berean Standard Bible",
+      "abbr": "BSB",
+      "bibleId": "bba9f40183526463-01"
+    },
+    {
+      "name": "Douay-Rheims American 1899",
+      "abbr": "DRA",
+      "bibleId": "179568874c45066f-01"
+    },
+    {
+      "name": "Free Bible Version",
+      "abbr": "FBV",
+      "bibleId": "65eec8e0b60e656b-01"
+    },
+    {
+      "name": "King James Version",
+      "abbr": "KJV",
+      "bibleId": "de4e12af7f28f599-01"
+    },
+    {
+      "name": "Literal Standard Version",
+      "abbr": "LSV",
+      "bibleId": "01b29f4b342acc35-01"
+    },
+    {
+      "name": "World English Bible",
+      "abbr": "WEB",
+      "bibleId": "9879dbb7cfe39e4d-01"
+    },
+    {
+      "name": "World English Bible Updated",
+      "abbr": "WEBU",
+      "bibleId": "72f4e6dc683324df-01"
+    },
+    {
+      "name": "The Orthodox Jewish Bible",
+      "abbr": "TOJB2011",
+      "bibleId": "c89622d31b60c444-02"
+    }
+  ],
+  "introVerses": [
+    {
+      "reference": "Romans 8:28 (KJV)",
+      "text": "And we know that all things work together for good to them that love God, to them who are the called according to his purpose.",
+      "reflection": "How might this verse shape the way you view your current circumstances?"
+    },
+    {
+      "reference": "Proverbs 3:5–6 (KJV)",
+      "text": "Trust in the Lord with all thine heart; and lean not unto thine own understanding. In all thy ways acknowledge him, and he shall direct thy paths.",
+      "reflection": "What would it look like for you to trust God more fully today?"
+    },
+    {
+      "reference": "Psalm 119:105 (KJV)",
+      "text": "Thy word is a lamp unto my feet, and a light unto my path.",
+      "reflection": "Where do you need guidance right now?"
+    },
+    {
+      "reference": "Isaiah 41:10 (KJV)",
+      "text": "Fear thou not; for I am with thee: be not dismayed; for I am thy God: I will strengthen thee...",
+      "reflection": "What part of this promise speaks to your heart today?"
+    },
+    {
+      "reference": "2 Timothy 3:16–17 (KJV)",
+      "text": "All scripture is given by inspiration of God, and is profitable for doctrine, for reproof, for correction, for instruction in righteousness...",
+      "reflection": "How does this verse affirm the importance of Bible study in your life?"
+    },
+    {
+      "reference": "John 1:1 (KJV)",
+      "text": "In the beginning was the Word, and the Word was with God, and the Word was God.",
+      "reflection": "What does this tell you about who Jesus is?"
+    },
+    {
+      "reference": "Philippians 4:6–7 (KJV)",
+      "text": "Be careful for nothing; but in every thing by prayer and supplication with thanksgiving let your requests be made known unto God...",
+      "reflection": "Is there something you need to bring to God in prayer today?"
+    }
+  ],
+  "currentPrompts": [
+    "What does John 3:16 mean?",
+    "Show me Psalm 23 in the KJV.",
+    "Help me start reading the Gospel of John.",
+    "What does the Bible say about God's love?",
+    "Explain Romans 8:28 to me.",
+    "Can you show that in the ASV?",
+    "Suggest a passage about grace and explain it.",
+    "Give me a short devotional."
+  ],
+  "fallbacks": {
+    "general": [
+      "What does John 1:1 mean?",
+      "Help me understand Romans 8:28.",
+      "Show me Psalm 23 in the KJV.",
+      "Give me a short devotional."
+    ],
+    "newBelievers": [
+      "Where should I start reading the Bible?",
+      "Can you explain the Gospel to me?",
+      "What does John 1:1 mean?",
+      "How do I pray using Scripture?"
+    ],
+    "deepStudy": [
+      "Compare Romans 5:12 in KJV and BSB.",
+      "Explain the context of Hebrews 11:1.",
+      "Give me historical context for Acts 2.",
+      "Start a study on the Sermon on the Mount."
+    ],
+    "application": [
+      "Give me a verse about comfort during grief.",
+      "What does the Bible say when I feel anxious?",
+      "Help me study humility in the Bible.",
+      "How can I grow in my walk with God?"
+    ]
+  }
+}
