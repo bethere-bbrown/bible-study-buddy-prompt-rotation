@@ -112,28 +112,28 @@ jobs:
             }' > master-config.json
           echo "master-config.json:"; cat master-config.json
 
-          - name: Commit if changed
-          run: |
-            set -euo pipefail
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Commit if changed
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
   
-            echo "Git status before add:"
-            git status --porcelain || true
-            ls -la || true
+          echo "Git status before add:"
+          git status --porcelain || true
+          ls -la || true
   
-            # Stage outputs FIRST so untracked files are included in the diff
-            git add -A
+          # Stage outputs FIRST so untracked files are included in the diff
+          git add -A
   
-            echo "Git status after add:"
-            git status --porcelain || true
+          echo "Git status after add:"
+          git status --porcelain || true
   
-            # Check staged changes (cached)
-            if ! git diff --cached --quiet; then
-              git commit -m "build: update master-config.json"
-              git push
-              echo "Updated master-config.json"
-            else
-              echo "No changes to commit."
-            fi
+          # Check staged changes (cached)
+          if ! git diff --cached --quiet; then
+            git commit -m "build: update master-config.json"
+            git push
+            echo "Updated master-config.json"
+          else
+            echo "No changes to commit."
+          fi
 
